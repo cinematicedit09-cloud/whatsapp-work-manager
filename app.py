@@ -1,7 +1,6 @@
 import os
 import json
 import datetime
-import hashlib
 from functools import wraps
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 
@@ -11,9 +10,14 @@ app.secret_key = os.environ.get("SECRET_KEY", "workbot-secret-key-change-me")
 # --- Configuration ---
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
-# Login credentials (set these in Render environment variables!)
-APP_USERNAME = os.environ.get("APP_USERNAME", "admin")
-APP_PASSWORD = os.environ.get("APP_PASSWORD", "workbot123")
+# --- Multi-User Login System ---
+# Format in Render: USERS=harman:mypass123,deep:deep456,ravi:ravi789
+USERS_STR = os.environ.get("USERS", "admin:workbot123")
+USERS = {}
+for pair in USERS_STR.split(","):
+    if ":" in pair:
+        u, p = pair.strip().split(":", 1)
+        USERS[u.strip()] = p.strip()
 
 
 # --- Authentication ---
@@ -166,13 +170,13 @@ def login_page():
 def login():
     """Handle login."""
     data = request.json
-    username = data.get("username", "")
+    username = data.get("username", "").strip()
     password = data.get("password", "")
 
-    if username == APP_USERNAME and password == APP_PASSWORD:
+    if username in USERS and USERS[username] == password:
         session["logged_in"] = True
         session["username"] = username
-        return jsonify({"success": True})
+        return jsonify({"success": True, "username": username})
     return jsonify({"success": False, "error": "Wrong username or password"}), 401
 
 
