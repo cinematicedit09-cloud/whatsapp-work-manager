@@ -271,6 +271,38 @@ def health():
     return jsonify({"status": "running", "ai": bool(groq_client)})
 
 
+# --- WhatsApp Bot (Twilio Webhook) ---
+@app.route("/webhook", methods=["POST"])
+def whatsapp_webhook():
+    """Handle incoming WhatsApp messages from Twilio."""
+    try:
+        from twilio.twiml.messaging_response import MessagingResponse
+    except ImportError:
+        return "Twilio not installed", 500
+
+    incoming_msg = request.values.get("Body", "").strip()
+    sender = request.values.get("From", "")
+
+    print(f"WhatsApp from {sender}: {incoming_msg}")
+
+    # Get AI response (same brain as web app!)
+    result = get_ai_response(incoming_msg, [], None)
+    reply_text = result["response"]
+
+    # WhatsApp has 1600 char limit, truncate if needed
+    if len(reply_text) > 1500:
+        reply_text = reply_text[:1500] + "\n\n... (open web app for full response)"
+
+    # Remove markdown formatting for WhatsApp
+    reply_text = reply_text.replace("**", "*")  # bold
+    reply_text = reply_text.replace("##", "")    # headers
+    reply_text = reply_text.replace("###", "")
+
+    resp = MessagingResponse()
+    resp.message(reply_text)
+    return str(resp)
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
