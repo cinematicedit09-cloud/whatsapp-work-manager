@@ -3,205 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WorkBot - Login</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>WorkBot AI — Sign In</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root {
-            --primary: #8b5cf6;
-            --primary-dark: #7c3aed;
-            --secondary: #06b6d4;
-            --bg-dark: #0f0f0f;
-            --bg-card: #171717;
-            --bg-input: #1e1e1e;
-            --text: #f5f5f5;
-            --text-muted: #a3a3a3;
-            --border: #2e2e2e;
-            --danger: #ef4444;
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --bg:#1a1a1a;--bg-card:#242424;--bg-input:#2d2d2d;
+            --text:#ececec;--text-secondary:#a0a0a0;--text-dim:#6b6b6b;
+            --accent:#7c6fe0;--accent-hover:#6b5dd3;
+            --border:#3d3d3d;--danger:#f44336;--success:#4caf50;
         }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-        .login-container {
-            width: 400px;
-            max-width: 90vw;
-            padding: 40px;
-            background: var(--bg-card);
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            text-align: center;
-        }
-        .login-logo {
-            font-size: 2.5rem;
-            margin-bottom: 8px;
-        }
-        .login-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 6px;
-        }
-        .login-subtitle {
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            margin-bottom: 30px;
-        }
-        .form-group {
-            margin-bottom: 16px;
-            text-align: left;
-        }
-        .form-group label {
-            display: block;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-            font-weight: 500;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 14px 16px;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text);
-            font-size: 0.9rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .form-group input:focus {
-            border-color: var(--primary);
-        }
-        .login-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border: none;
-            border-radius: 10px;
-            color: white;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: transform 0.2s, opacity 0.2s;
-        }
-        .login-btn:hover { transform: translateY(-2px); }
-        .login-btn:active { transform: translateY(0); }
-        .login-btn:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
-        .error-msg {
-            color: var(--danger);
-            font-size: 0.8rem;
-            margin-top: 12px;
-            display: none;
-        }
-        .error-msg.show { display: block; }
-        .bg-glow {
-            position: fixed;
-            width: 300px; height: 300px;
-            border-radius: 50%;
-            filter: blur(100px);
-            opacity: 0.15;
-            pointer-events: none;
-        }
-        .glow-1 { top: -100px; left: -100px; background: var(--primary); }
-        .glow-2 { bottom: -100px; right: -100px; background: var(--secondary); }
+        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+        .glow{position:fixed;width:400px;height:400px;border-radius:50%;filter:blur(120px);opacity:.08;pointer-events:none}
+        .g1{top:-150px;left:-150px;background:var(--accent)}
+        .g2{bottom:-150px;right:-150px;background:#06b6d4}
+        .card{width:380px;max-width:92vw;padding:36px;background:var(--bg-card);border-radius:16px;border:1px solid var(--border);position:relative;z-index:1}
+        .card-header{text-align:center;margin-bottom:28px}
+        .card-icon{display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:12px;background:var(--accent);color:#fff;font-size:1.2rem;margin-bottom:12px}
+        .card-header h1{font-size:1.3rem;font-weight:600;margin-bottom:4px}
+        .card-header p{font-size:0.8rem;color:var(--text-secondary)}
+        .form-group{margin-bottom:14px}
+        .form-group label{display:block;font-size:0.72rem;color:var(--text-secondary);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px}
+        .form-group input{width:100%;padding:12px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.88rem;outline:none;transition:border-color .2s}
+        .form-group input:focus{border-color:var(--accent)}
+        .submit-btn{width:100%;padding:13px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:0.88rem;font-weight:600;cursor:pointer;margin-top:8px;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+        .submit-btn:hover{background:var(--accent-hover);transform:translateY(-1px)}
+        .submit-btn:disabled{opacity:.5;transform:none;cursor:not-allowed}
+        .toggle-row{text-align:center;margin-top:18px;font-size:0.78rem}
+        .toggle-row span{color:var(--text-dim)}
+        .toggle-row button{background:none;border:none;color:var(--accent);font-weight:600;cursor:pointer;font-size:0.78rem}
+        .toggle-row button:hover{text-decoration:underline}
+        .error{color:var(--danger);font-size:0.75rem;text-align:center;margin-top:12px;display:none}
+        .error.show{display:block}
+        .features{display:flex;gap:6px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+        .feat{padding:4px 10px;background:var(--bg-input);border-radius:20px;font-size:0.62rem;color:var(--text-dim);border:1px solid var(--border)}
     </style>
 </head>
 <body>
-    <div class="bg-glow glow-1"></div>
-    <div class="bg-glow glow-2"></div>
-
-    <div class="login-container">
-        <div class="login-logo"><i class="fas fa-bolt"></i></div>
-        <div class="login-title">WorkBot</div>
-        <div class="login-subtitle">Your AI Personal Work Manager</div>
-
-        <form onsubmit="handleLogin(event)" id="loginForm">
+    <div class="glow g1"></div>
+    <div class="glow g2"></div>
+    <div class="card">
+        <div class="card-header">
+            <div class="card-icon"><i class="fas fa-bolt"></i></div>
+            <h1 id="formTitle">Sign in to WorkBot</h1>
+            <p id="formSubtitle">Your professional AI assistant</p>
+        </div>
+        <form onsubmit="handleSubmit(event)" id="authForm">
             <div class="form-group">
                 <label>Username</label>
-                <input type="text" id="username" placeholder="Enter username" required autofocus>
+                <input type="text" id="username" placeholder="Enter username" required autocomplete="username" autofocus>
             </div>
             <div class="form-group">
                 <label>Password</label>
-                <input type="password" id="password" placeholder="Enter password" required>
+                <input type="password" id="password" placeholder="Enter password" required autocomplete="current-password">
             </div>
-            <button type="submit" class="login-btn" id="loginBtn">
-                <i class="fas fa-sign-in-alt"></i> Sign In
-            </button>
+            <button type="submit" class="submit-btn" id="submitBtn"><i class="fas fa-arrow-right"></i> <span id="btnText">Sign In</span></button>
         </form>
-        <div style="text-align:center;margin-top:16px;">
-            <span style="color:var(--text-muted);font-size:0.8rem;">Don't have an account?</span>
-            <button onclick="toggleSignup()" style="background:none;border:none;color:var(--primary);font-size:0.85rem;font-weight:600;cursor:pointer;text-decoration:underline;" id="toggleBtn">Sign Up</button>
+        <div class="toggle-row">
+            <span id="toggleLabel">Don't have an account?</span>
+            <button onclick="toggle()" id="toggleBtn">Create one</button>
         </div>
-        <div class="error-msg" id="errorMsg">Invalid username or password</div>
+        <div class="error" id="errorMsg"></div>
+        <div class="features">
+            <span class="feat">AI Chat</span>
+            <span class="feat">Task Manager</span>
+            <span class="feat">Code Help</span>
+            <span class="feat">Video Editing</span>
+            <span class="feat">Planning</span>
+        </div>
     </div>
-
     <script>
-    let isSignup = false;
-
-    function toggleSignup() {
-        isSignup = !isSignup;
-        const btn = document.getElementById('loginBtn');
-        const toggleBtn = document.getElementById('toggleBtn');
-        const subtitle = document.querySelector('.login-subtitle');
-        if (isSignup) {
-            btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
-            toggleBtn.textContent = 'Sign In';
-            subtitle.textContent = 'Create your free account';
-            document.querySelector('[onclick="toggleSignup()"]').previousElementSibling.textContent = 'Already have an account?';
-        } else {
-            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
-            toggleBtn.textContent = 'Sign Up';
-            subtitle.textContent = 'Your AI Personal Work Manager';
-            document.querySelector('[onclick="toggleSignup()"]').previousElementSibling.textContent = "Don't have an account?";
-        }
+    let mode='login';
+    function toggle(){
+        mode=mode==='login'?'signup':'login';
+        document.getElementById('formTitle').textContent=mode==='login'?'Sign in to WorkBot':'Create your account';
+        document.getElementById('formSubtitle').textContent=mode==='login'?'Your professional AI assistant':'Free forever. No credit card.';
+        document.getElementById('btnText').textContent=mode==='login'?'Sign In':'Create Account';
+        document.getElementById('toggleLabel').textContent=mode==='login'?"Don't have an account?":'Already have an account?';
+        document.getElementById('toggleBtn').textContent=mode==='login'?'Create one':'Sign in';
         document.getElementById('errorMsg').classList.remove('show');
     }
-
-    async function handleLogin(e) {
+    async function handleSubmit(e){
         e.preventDefault();
-        const btn = document.getElementById('loginBtn');
-        const errorEl = document.getElementById('errorMsg');
-        
-        btn.disabled = true;
-        btn.innerHTML = isSignup ? '<i class="fas fa-spinner fa-spin"></i> Creating...' : '<i class="fas fa-spinner fa-spin"></i> Signing in...';
-        errorEl.classList.remove('show');
-
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        const endpoint = isSignup ? '/api/signup' : '/api/login';
-
-        try {
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ username, password })
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                window.location.href = '/';
-            } else {
-                errorEl.textContent = data.error || 'Something went wrong';
-                errorEl.classList.add('show');
-                btn.disabled = false;
-                btn.innerHTML = isSignup ? '<i class="fas fa-user-plus"></i> Create Account' : '<i class="fas fa-sign-in-alt"></i> Sign In';
-            }
-        } catch(e) {
-            errorEl.textContent = 'Connection error. Try again.';
-            errorEl.classList.add('show');
-            btn.disabled = false;
-            btn.innerHTML = isSignup ? '<i class="fas fa-user-plus"></i> Create Account' : '<i class="fas fa-sign-in-alt"></i> Sign In';
-        }
+        const btn=document.getElementById('submitBtn'),err=document.getElementById('errorMsg');
+        btn.disabled=true;
+        document.getElementById('btnText').textContent='Please wait...';
+        err.classList.remove('show');
+        const username=document.getElementById('username').value.trim();
+        const password=document.getElementById('password').value;
+        const endpoint=mode==='login'?'/api/login':'/api/signup';
+        try{
+            const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
+            const data=await res.json();
+            if(data.success){window.location.href='/'}
+            else{err.textContent=data.error||'Something went wrong';err.classList.add('show')}
+        }catch(ex){err.textContent='Connection error. Try again.';err.classList.add('show')}
+        btn.disabled=false;
+        document.getElementById('btnText').textContent=mode==='login'?'Sign In':'Create Account';
     }
     </script>
 </body>
