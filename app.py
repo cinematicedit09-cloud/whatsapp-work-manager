@@ -11,13 +11,31 @@ app.secret_key = os.environ.get("SECRET_KEY", "workbot-secret-key-change-me")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
 # --- Multi-User Login System ---
-# Format in Render: USERS=harman:mypass123,deep:deep456,ravi:ravi789
-USERS_STR = os.environ.get("USERS", "admin:workbot123")
-USERS = {}
-for pair in USERS_STR.split(","):
-    if ":" in pair:
-        u, p = pair.strip().split(":", 1)
-        USERS[u.strip()] = p.strip()
+# Users stored in a JSON file so anyone can sign up
+USERS_FILE = "users.json"
+
+# Load initial users from env (if any) + file
+def load_users():
+    """Load users from JSON file."""
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, "r") as f:
+            return json.load(f)
+    # First time: create from env variable or default admin
+    users_str = os.environ.get("USERS", "admin:workbot123")
+    users = {}
+    for pair in users_str.split(","):
+        if ":" in pair:
+            u, p = pair.strip().split(":", 1)
+            users[u.strip()] = p.strip()
+    save_users(users)
+    return users
+
+def save_users(users):
+    """Save users to JSON file."""
+    with open(USERS_FILE, "w") as f:
+        json.dump(users, f, indent=2)
+
+USERS = load_users()
 
 
 # --- Authentication ---
@@ -173,11 +191,46 @@ def login():
     username = data.get("username", "").strip()
     password = data.get("password", "")
 
+    global USERS
+    USERS = load_users()
+
     if username in USERS and USERS[username] == password:
         session["logged_in"] = True
         session["username"] = username
         return jsonify({"success": True, "username": username})
     return jsonify({"success": False, "error": "Wrong username or password"}), 401
+
+
+@app.route("/api/signup", methods=["POST"])
+def signup():
+    """Handle sign up - create new account."""
+    data = request.json
+    username = data.get("username", "").strip()
+    password = data.get("password", "")
+
+    if not username or not password:
+        return jsonify({"success": False, "error": "Username and password required"}), 400
+
+    if len(username) < 3:
+        return jsonify({"success": False, "error": "Username must be at least 3 characters"}), 400
+
+    if len(password) < 4:
+        return jsonify({"success": False, "error": "Password must be at least 4 characters"}), 400
+
+    global USERS
+    USERS = load_users()
+
+    if username in USERS:
+        return jsonify({"success": False, "error": "Username already taken! Try another."}), 400
+
+    # Create account
+    USERS[username] = password
+    save_users(USERS)
+
+    # Auto-login after signup
+    session["logged_in"] = True
+    session["username"] = username
+    return jsonify({"success": True, "username": username})
 
 
 @app.route("/api/logout", methods=["POST"])

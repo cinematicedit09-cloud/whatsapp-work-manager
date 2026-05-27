@@ -125,7 +125,7 @@
         <div class="login-title">WorkBot</div>
         <div class="login-subtitle">Your AI Personal Work Manager</div>
 
-        <form onsubmit="handleLogin(event)">
+        <form onsubmit="handleLogin(event)" id="loginForm">
             <div class="form-group">
                 <label>Username</label>
                 <input type="text" id="username" placeholder="Enter username" required autofocus>
@@ -138,24 +138,50 @@
                 <i class="fas fa-sign-in-alt"></i> Sign In
             </button>
         </form>
+        <div style="text-align:center;margin-top:16px;">
+            <span style="color:var(--text-muted);font-size:0.8rem;">Don't have an account?</span>
+            <button onclick="toggleSignup()" style="background:none;border:none;color:var(--primary);font-size:0.85rem;font-weight:600;cursor:pointer;text-decoration:underline;" id="toggleBtn">Sign Up</button>
+        </div>
         <div class="error-msg" id="errorMsg">Invalid username or password</div>
     </div>
 
     <script>
+    let isSignup = false;
+
+    function toggleSignup() {
+        isSignup = !isSignup;
+        const btn = document.getElementById('loginBtn');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const subtitle = document.querySelector('.login-subtitle');
+        if (isSignup) {
+            btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
+            toggleBtn.textContent = 'Sign In';
+            subtitle.textContent = 'Create your free account';
+            document.querySelector('[onclick="toggleSignup()"]').previousElementSibling.textContent = 'Already have an account?';
+        } else {
+            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+            toggleBtn.textContent = 'Sign Up';
+            subtitle.textContent = 'Your AI Personal Work Manager';
+            document.querySelector('[onclick="toggleSignup()"]').previousElementSibling.textContent = "Don't have an account?";
+        }
+        document.getElementById('errorMsg').classList.remove('show');
+    }
+
     async function handleLogin(e) {
         e.preventDefault();
         const btn = document.getElementById('loginBtn');
         const errorEl = document.getElementById('errorMsg');
         
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
+        btn.innerHTML = isSignup ? '<i class="fas fa-spinner fa-spin"></i> Creating...' : '<i class="fas fa-spinner fa-spin"></i> Signing in...';
         errorEl.classList.remove('show');
 
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
+        const endpoint = isSignup ? '/api/signup' : '/api/login';
 
         try {
-            const res = await fetch('/api/login', {
+            const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ username, password })
@@ -165,16 +191,16 @@
             if (data.success) {
                 window.location.href = '/';
             } else {
-                errorEl.textContent = data.error || 'Invalid username or password';
+                errorEl.textContent = data.error || 'Something went wrong';
                 errorEl.classList.add('show');
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+                btn.innerHTML = isSignup ? '<i class="fas fa-user-plus"></i> Create Account' : '<i class="fas fa-sign-in-alt"></i> Sign In';
             }
         } catch(e) {
             errorEl.textContent = 'Connection error. Try again.';
             errorEl.classList.add('show');
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+            btn.innerHTML = isSignup ? '<i class="fas fa-user-plus"></i> Create Account' : '<i class="fas fa-sign-in-alt"></i> Sign In';
         }
     }
     </script>
