@@ -337,6 +337,7 @@
                     <button class="header-btn" onclick="openAddTask()"><i class="fas fa-plus"></i> Add Task</button>
                     <button class="header-btn" onclick="sendQuick('Show my pending tasks')"><i class="fas fa-list-check"></i> Tasks</button>
                     <button class="header-btn" onclick="sendQuick('Give me a summary of my work')"><i class="fas fa-chart-pie"></i> Summary</button>
+                    <button class="header-btn" onclick="logoutUser()" style="color:var(--danger);"><i class="fas fa-sign-out-alt"></i> Logout</button>
                 </div>
             </div>
 
@@ -630,6 +631,13 @@
         document.getElementById('chatsList').style.display = tab === 'chats' ? 'block' : 'none';
         document.getElementById('tasksList').style.display = tab === 'tasks' ? 'block' : 'none';
         if (tab === 'tasks') renderTasksList();
+    }
+
+    // --- Logout ---
+    async function logoutUser() {
+        if (!confirm('Logout karna hai?')) return;
+        await fetch('/api/logout', { method: 'POST' });
+        window.location.href = '/login';
     }
 
     // --- Init ---

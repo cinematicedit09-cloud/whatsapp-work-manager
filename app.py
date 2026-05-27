@@ -1,12 +1,32 @@
 import os
 import json
 import datetime
-from flask import Flask, request, jsonify, render_template
+import hashlib
+from functools import wraps
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "workbot-secret-key-change-me")
 
 # --- Configuration ---
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+
+# Login credentials (set these in Render environment variables!)
+APP_USERNAME = os.environ.get("APP_USERNAME", "admin")
+APP_PASSWORD = os.environ.get("APP_PASSWORD", "workbot123")
+
+
+# --- Authentication ---
+def login_required(f):
+    """Decorator to protect routes with login."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get("logged_in"):
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "Not authenticated"}), 401
+            return redirect(url_for("login_page"))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Lazy import groq to handle missing key gracefully
 groq_client = None
@@ -134,13 +154,44 @@ def detect_task_action(message):
 
 
 # --- Routes ---
+@app.route("/login", methods=["GET"])
+def login_page():
+    """Show login page."""
+    if session.get("logged_in"):
+        return redirect(url_for("home"))
+    return render_template("login.html")
+
+
+@app.route("/api/login", methods=["POST"])
+def login():
+    """Handle login."""
+    data = request.json
+    username = data.get("username", "")
+    password = data.get("password", "")
+
+    if username == APP_USERNAME and password == APP_PASSWORD:
+        session["logged_in"] = True
+        session["username"] = username
+        return jsonify({"success": True})
+    return jsonify({"success": False, "error": "Wrong username or password"}), 401
+
+
+@app.route("/api/logout", methods=["POST"])
+def logout():
+    """Handle logout."""
+    session.clear()
+    return jsonify({"success": True})
+
+
 @app.route("/")
+@login_required
 def home():
     """Serve the main app."""
     return render_template("index.html")
 
 
 @app.route("/api/chat", methods=["POST"])
+@login_required
 def chat():
     """Handle chat messages."""
     data = request.json
