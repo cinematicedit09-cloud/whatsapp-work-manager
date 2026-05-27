@@ -1,120 +1,62 @@
 import os
 import json
 import datetime
-from flask import Flask, request
-from twilio.twiml.messaging_response import MessagingResponse
-from groq import Groq
+from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
 
 # --- Configuration ---
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-groq_client = Groq(api_key=GROQ_API_KEY)
 
-# --- Simple JSON File Database ---
-DB_FILE = "tasks.json"
-
-
-def load_tasks():
-    """Load tasks from JSON file."""
-    if os.path.exists(DB_FILE):
-        with open(DB_FILE, "r") as f:
-            return json.load(f)
-    return []
+# Lazy import groq to handle missing key gracefully
+groq_client = None
+try:
+    from groq import Groq
+    if GROQ_API_KEY:
+        groq_client = Groq(api_key=GROQ_API_KEY)
+except Exception:
+    pass
 
 
-def save_tasks(tasks):
-    """Save tasks to JSON file."""
-    with open(DB_FILE, "w") as f:
-        json.dump(tasks, f, indent=2)
+# --- AI Chat Logic ---
+def get_ai_response(user_message, tasks):
+    """Get AI response for work management."""
+    if not groq_client:
+        return {"response": "Error: GROQ_API_KEY not set. Please add it in Render environment variables.", "task_action": None}
 
+    pending_tasks = [t for t in tasks if not t.get("done")]
+    done_tasks = [t for t in tasks if t.get("done")]
 
-def add_task(task_text, priority="medium"):
-    """Add a new task."""
-    tasks = load_tasks()
-    task = {
-        "id": len(tasks) + 1,
-        "text": task_text,
-        "priority": priority,
-        "done": False,
-        "created": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-    }
-    tasks.append(task)
-    save_tasks(tasks)
-    return task
+    system_prompt = f"""You are WorkBot - an intelligent AI personal work manager and productivity assistant.
+You help users manage their work, tasks, schedule, and answer any questions they have.
 
+You can understand English, Hindi, Hinglish, and Punjabi.
 
-def complete_task(task_identifier):
-    """Mark a task as done by ID or text match."""
-    tasks = load_tasks()
-    for task in tasks:
-        if str(task["id"]) == str(task_identifier) or task_identifier.lower() in task["text"].lower():
-            task["done"] = True
-            save_tasks(tasks)
-            return task
-    return None
+CURRENT TASKS:
+Pending ({len(pending_tasks)}): {json.dumps(pending_tasks[:10], indent=1) if pending_tasks else "None"}
+Completed ({len(done_tasks)}): {len(done_tasks)} tasks done
 
+YOUR CAPABILITIES:
+1. Answer ANY question the user asks (like ChatGPT/Claude)
+2. Help manage tasks (add, complete, delete, prioritize)
+3. Plan their day/week based on pending tasks
+4. Give productivity advice and work strategies
+5. Help with brainstorming, writing, coding questions
+6. Summarize work status and progress
 
-def delete_task(task_identifier):
-    """Delete a task by ID or text match."""
-    tasks = load_tasks()
-    for i, task in enumerate(tasks):
-        if str(task["id"]) == str(task_identifier) or task_identifier.lower() in task["text"].lower():
-            removed = tasks.pop(i)
-            save_tasks(tasks)
-            return removed
-    return None
+TASK DETECTION:
+If the user wants to ADD a task, include in your response the task naturally AND return a task_action.
+If they want to COMPLETE or DELETE a task, acknowledge it AND return a task_action.
 
+RESPONSE STYLE:
+- Be conversational, friendly, and helpful
+- Keep responses focused and useful (not too long unless explaining something complex)
+- Use emojis sparingly for readability
+- Format lists and plans clearly
+- If user asks a general question (coding, life, anything), answer it fully like a smart assistant
 
-def get_pending_tasks():
-    """Get all pending tasks."""
-    tasks = load_tasks()
-    return [t for t in tasks if not t["done"]]
-
-
-def get_all_tasks():
-    """Get all tasks."""
-    return load_tasks()
-
-
-def get_summary():
-    """Get a summary of tasks."""
-    tasks = load_tasks()
-    total = len(tasks)
-    done = len([t for t in tasks if t["done"]])
-    pending = total - done
-    return {"total": total, "done": done, "pending": pending}
-
-
-# --- AI Message Understanding ---
-def understand_message(user_message):
-    """Use Groq AI to understand what the user wants."""
-    system_prompt = """You are a WhatsApp task manager assistant. 
-    Understand the user's message and respond with a JSON action.
-    
-    The user may write in English, Hindi, Hinglish, or Punjabi.
-    
-    Possible actions:
-    1. {"action": "add", "task": "task description", "priority": "high/medium/low"}
-    2. {"action": "done", "identifier": "task id or text"}
-    3. {"action": "delete", "identifier": "task id or text"}
-    4. {"action": "list", "filter": "all/pending/done"}
-    5. {"action": "summary"}
-    6. {"action": "help"}
-    7. {"action": "chat", "response": "your friendly response"}
-    
-    Examples:
-    - "add meeting at 5pm" -> {"action": "add", "task": "meeting at 5pm", "priority": "medium"}
-    - "urgent: finish report" -> {"action": "add", "task": "finish report", "priority": "high"}
-    - "done meeting" -> {"action": "done", "identifier": "meeting"}
-    - "delete task 3" -> {"action": "delete", "identifier": "3"}
-    - "show tasks" / "meri tasks dikha" -> {"action": "list", "filter": "pending"}
-    - "all tasks" -> {"action": "list", "filter": "all"}
-    - "summary" / "status" -> {"action": "summary"}
-    - "help" -> {"action": "help"}
-    - "hello" / "hi" -> {"action": "chat", "response": "Hey! I'm your work manager. Send me tasks or say 'help' to see what I can do!"}
-    
-    ONLY respond with valid JSON. Nothing else."""
+IMPORTANT: You are NOT just a task manager. You are a full AI assistant that ALSO manages tasks.
+Answer coding questions, explain concepts, help with writing, give advice - do everything!"""
 
     try:
         response = groq_client.chat.completions.create(
@@ -123,148 +65,99 @@ def understand_message(user_message):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message},
             ],
-            temperature=0.1,
-            max_tokens=200,
+            temperature=0.7,
+            max_tokens=1000,
         )
-        result = response.choices[0].message.content.strip()
-        # Clean up response if needed
-        if result.startswith("```"):
-            result = result.split("\n", 1)[1].rsplit("```", 1)[0]
-        return json.loads(result)
+        ai_text = response.choices[0].message.content.strip()
     except Exception as e:
         print(f"AI Error: {e}")
-        return {"action": "chat", "response": "Sorry, I didn't understand that. Type 'help' for options."}
+        ai_text = "Sorry, having a brain freeze. Try again in a moment!"
+
+    # Detect task actions
+    task_action = detect_task_action(user_message)
+
+    return {"response": ai_text, "task_action": task_action}
 
 
-# --- Format Responses ---
-def format_task_list(tasks, title="Your Tasks"):
-    """Format tasks as a nice WhatsApp message."""
-    if not tasks:
-        return "No tasks found! You're all clear. Add one by sending a task."
+def detect_task_action(message):
+    """Detect if user wants to add/complete/delete a task."""
+    msg = message.lower().strip()
 
-    msg = f"*{title}*\n\n"
-    for task in tasks:
-        status = "done" if task["done"] else "pending"
-        priority_emoji = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(task["priority"], "🟡")
-        check = "✅" if task["done"] else "⬜"
-        msg += f"{check} *#{task['id']}* {priority_emoji} {task['text']}\n"
-        msg += f"    📅 {task['created']} | Status: {status}\n\n"
-    return msg
+    # Add task patterns
+    add_patterns = ["add task", "add:", "new task", "task add", "add kar", "create task", "remind me to", "need to"]
+    for pattern in add_patterns:
+        if pattern in msg:
+            # Extract task text
+            task_text = message
+            for p in ["add task:", "add task", "add:", "new task:", "new task", "task add:", "create task:", "remind me to", "need to"]:
+                if p.lower() in msg:
+                    idx = msg.index(p.lower()) + len(p)
+                    task_text = message[idx:].strip().strip(":-").strip()
+                    break
 
+            priority = "medium"
+            if any(w in msg for w in ["urgent", "important", "high", "asap", "critical"]):
+                priority = "high"
+            elif any(w in msg for w in ["low", "later", "sometime", "optional"]):
+                priority = "low"
 
-def get_help_message():
-    """Return help message."""
-    return """*🤖 WhatsApp Work Manager - Help*
+            if task_text:
+                return {"type": "add", "task": task_text, "priority": priority}
 
-Here's what I can do:
+    # Complete task patterns
+    done_patterns = ["done:", "done ", "complete:", "completed", "finished", "mark done", "ho gaya", "kar liya"]
+    for pattern in done_patterns:
+        if pattern in msg:
+            text = message
+            for p in ["done:", "done ", "complete:", "completed:", "finished:", "mark done:"]:
+                if p.lower() in msg:
+                    idx = msg.index(p.lower()) + len(p)
+                    text = message[idx:].strip()
+                    break
+            if text:
+                return {"type": "done", "text": text}
 
-*📝 Add Tasks:*
-• "Add: buy groceries"
-• "urgent: finish report by tomorrow"
-• "meeting at 5pm add kar"
+    # Delete task patterns
+    del_patterns = ["delete task", "remove task", "cancel task", "delete:", "remove:"]
+    for pattern in del_patterns:
+        if pattern in msg:
+            text = message
+            for p in ["delete task:", "delete task", "remove task:", "remove task", "cancel task:", "delete:", "remove:"]:
+                if p.lower() in msg:
+                    idx = msg.index(p.lower()) + len(p)
+                    text = message[idx:].strip()
+                    break
+            if text:
+                return {"type": "delete", "text": text}
 
-*✅ Complete Tasks:*
-• "Done: meeting"
-• "Complete task 2"
-• "task 3 ho gaya"
-
-*🗑️ Delete Tasks:*
-• "Delete task 1"
-• "Remove meeting"
-
-*📋 View Tasks:*
-• "Show my tasks"
-• "List all"
-• "Pending tasks dikha"
-
-*📊 Summary:*
-• "Summary"
-• "Status"
-• "Kinna kaam baaki hai?"
-
-*💡 Tips:*
-• I understand English, Hindi, Hinglish & Punjabi!
-• Use "urgent" or "important" for high priority
-• Refer to tasks by number or name
-
-Just send me a message naturally! 💬"""
-
-
-# --- Main WhatsApp Webhook ---
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    """Handle incoming WhatsApp messages from Twilio."""
-    incoming_msg = request.values.get("Body", "").strip()
-    sender = request.values.get("From", "")
-
-    print(f"Message from {sender}: {incoming_msg}")
-
-    # Understand the message using AI
-    action_data = understand_message(incoming_msg)
-    action = action_data.get("action", "chat")
-
-    # Process the action
-    if action == "add":
-        task_text = action_data.get("task", incoming_msg)
-        priority = action_data.get("priority", "medium")
-        task = add_task(task_text, priority)
-        priority_emoji = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(priority, "🟡")
-        reply = f"✅ Task added!\n\n{priority_emoji} *#{task['id']}* {task['text']}\nPriority: {priority}\n\nSend 'show tasks' to see all."
-
-    elif action == "done":
-        identifier = action_data.get("identifier", "")
-        task = complete_task(identifier)
-        if task:
-            reply = f"🎉 Great job! Task completed:\n\n✅ *#{task['id']}* {task['text']}\n\nKeep it up! 💪"
-        else:
-            reply = "❌ Task not found. Send 'show tasks' to see your task list."
-
-    elif action == "delete":
-        identifier = action_data.get("identifier", "")
-        task = delete_task(identifier)
-        if task:
-            reply = f"🗑️ Task deleted:\n\n*#{task['id']}* {task['text']}"
-        else:
-            reply = "❌ Task not found. Send 'show tasks' to see your task list."
-
-    elif action == "list":
-        filter_type = action_data.get("filter", "pending")
-        if filter_type == "all":
-            tasks = get_all_tasks()
-            reply = format_task_list(tasks, "All Tasks")
-        elif filter_type == "done":
-            tasks = [t for t in get_all_tasks() if t["done"]]
-            reply = format_task_list(tasks, "Completed Tasks")
-        else:
-            tasks = get_pending_tasks()
-            reply = format_task_list(tasks, "Pending Tasks")
-
-    elif action == "summary":
-        s = get_summary()
-        reply = f"""*📊 Work Summary*
-
-📋 Total Tasks: {s['total']}
-✅ Completed: {s['done']}
-⏳ Pending: {s['pending']}
-
-{'🎉 All done! Great work!' if s['pending'] == 0 and s['total'] > 0 else '💪 Keep going, you got this!' if s['pending'] > 0 else '📝 No tasks yet. Send me a task to get started!'}"""
-
-    elif action == "help":
-        reply = get_help_message()
-
-    else:
-        reply = action_data.get("response", "I'm your work manager! Send 'help' to see what I can do.")
-
-    # Send response via Twilio
-    resp = MessagingResponse()
-    resp.message(reply)
-    return str(resp)
+    return None
 
 
-@app.route("/", methods=["GET"])
+# --- Routes ---
+@app.route("/")
 def home():
-    """Health check endpoint."""
-    return "WhatsApp Work Manager Bot is running! 🤖"
+    """Serve the main app."""
+    return render_template("index.html")
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    """Handle chat messages."""
+    data = request.json
+    user_message = data.get("message", "").strip()
+    tasks = data.get("tasks", [])
+
+    if not user_message:
+        return jsonify({"error": "No message"}), 400
+
+    result = get_ai_response(user_message, tasks)
+    return jsonify(result)
+
+
+@app.route("/health")
+def health():
+    """Health check."""
+    return jsonify({"status": "running", "ai": bool(groq_client)})
 
 
 if __name__ == "__main__":
